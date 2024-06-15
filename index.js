@@ -36,9 +36,23 @@ async function run() {
     // Send a ping to confirm a successful connection
     //await client.db("admin").command({ ping: 1 });
 
+
+    //all employees
+
+    app.get('/employees',async(req,res)=>{
+      const result =await employeecollection.find().toArray()
+      res.send(result)
+    })
+
     app.post('/employees',async(req,res)=>{
       const user =req.body;
-      const result =await 
+      const query ={email:user.email}
+      const exsitingUser =await employeecollection.findOne(query)
+      if(exsitingUser){
+        return res.send({message:'user already added',insertedId:null})
+      }
+      const result =await employeecollection.insertOne(user)
+      res.send(result)
     })
 
     app.get('/work',async(req,res)=>{
@@ -50,6 +64,16 @@ async function run() {
     app.get('/reviews',async(req,res)=>{
         const result =await reviewcollection.find().toArray()
         res.send(result)
+    })
+
+
+
+    app.delete('/employees/:id',async(req,res)=>{
+      const id =req.params.id;
+      const query ={_id:new ObjectId(id)}
+      const result =await employeecollection.deleteOne(query)
+      res.send(result)
+
     })
 
     //cart collection
