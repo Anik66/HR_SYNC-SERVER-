@@ -1,5 +1,6 @@
 const express = require('express');
 const app =express();
+const jwt = require('jsonwebtoken')
 const cors = require('cors')
 require('dotenv').config()
 const port =process.env.PORT || 8000
@@ -37,11 +38,73 @@ async function run() {
     //await client.db("admin").command({ ping: 1 });
 
 
+    //jwt related Api
+    app.post('/jwt',async(req,res)=>{
+      const user =req.body;
+      const token =jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{
+        expiresIn:'1hr'})
+        res.send({token})
+
+    })
+
+    //middlewires
+    
+    const verifyToken =(req,res,next)=>{
+      console.log('inside the verify token',req.headers.authorization)
+      if(!req.headers.authorization){
+        return res.status(401).send({message:'forbidden access'})
+      }
+      const token =req.headers.authorization.split(' ')[1]
+      
+      jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+        if(err){
+          return res.status(401).send({message:'forbidden access'})
+        }
+        req.decoded =decoded;
+        next()
+
+      })
+
+    }
+
+
+    const verifyAdmin =async(req,res,next) =>{
+      const email =req.decoded.email;
+      const query ={email:email};
+      const employees = await employeecollection.findOne(query)
+      const isAdmin =employees?.role ==='admin';
+      if(isAdmin){
+        return res.status(403).send({message:'forbidden access'})
+      }
+      next();
+
+    }
+
     //all employees
 
-    app.get('/employees',async(req,res)=>{
+    app.get('/employees', verifyToken,verifyAdmin, async(req,res)=>{
+      
       const result =await employeecollection.find().toArray()
       res.send(result)
+    })
+
+
+    app.get('/employees/admin/:email',verifyToken ,async(req,res)=>{
+      const email =req.params.email;
+      if(!email ==req.decoded.email){
+        return res.status(403).send({message:'unauthorized access'})
+
+      }
+      const query ={email:email}
+      const employees =await employeecollection.findOne(query)
+       let admin =false;
+       if(employees){
+        admin =employees?.role === 'admin'
+
+       }
+
+       res.send({admin})
+
     })
 
     app.post('/employees',async(req,res)=>{
@@ -55,6 +118,8 @@ async function run() {
       res.send(result)
     })
 
+
+
     app.get('/work',async(req,res)=>{
         const result =await workcollection.find().toArray()
         res.send(result)
@@ -66,9 +131,7 @@ async function run() {
         res.send(result)
     })
 
-
-
-    app.delete('/employees/:id',async(req,res)=>{
+    app.delete('/employees/:id',verifyToken, verifyAdmin,async(req,res)=>{
       const id =req.params.id;
       const query ={_id:new ObjectId(id)}
       const result =await employeecollection.deleteOne(query)
@@ -76,6 +139,24 @@ async function run() {
 
     })
 
+
+    
+    //make admin
+
+    app.patch('/employees/admin/:id', verifyToken,verifyAdmin,async(req,res)=>{
+      const id =req.params.id;
+      const filter ={_id:new ObjectId(id)}
+      const updatedDoc ={
+        $set:{
+          role:'admin'
+        }
+      }
+
+  const result =await employeecollection.updateOne(filter,updatedDoc)
+  res.send(result)
+    })
+
+  
     //cart collection
 
     app.get('/carts',async(req,res)=>{
