@@ -155,7 +155,7 @@ async function run() {
         }
       }
 
-  const result =await employeecollection.updateOne(filter,updatedDoc)
+  //const result =await employeecollection.updateOne(filter,updatedDoc)
   res.send(result)
     })
 
