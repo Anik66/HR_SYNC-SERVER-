@@ -52,15 +52,17 @@ async function run() {
     const verifyToken =(req,res,next)=>{
       console.log('inside the verify token',req.headers.authorization)
       if(!req.headers.authorization){
-        return res.status(401).send({message:'forbidden access'})
+        return res.status(401).send({message:'unauthoraized access'})
       }
       const token =req.headers.authorization.split(' ')[1]
       
       jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
         if(err){
-          return res.status(401).send({message:'forbidden access'})
+          return res.status(401).send({message:'unauthoraized access'})
         }
         req.decoded =decoded;
+
+        console.log('data',req.decoded)
         next()
 
       })
@@ -70,10 +72,11 @@ async function run() {
 
     const verifyAdmin =async(req,res,next) =>{
       const email =req.decoded.email;
+      
       const query ={email:email};
       const employees = await employeecollection.findOne(query)
       const isAdmin =employees?.role ==='admin';
-      if(isAdmin){
+      if(!isAdmin){
         return res.status(403).send({message:'forbidden access'})
       }
       next();
@@ -91,7 +94,7 @@ async function run() {
 
     app.get('/employees/admin/:email',verifyToken ,async(req,res)=>{
       const email =req.params.email;
-      if(!email ==req.decoded.email){
+     if(!email ==req.decoded.email){
         return res.status(403).send({message:'unauthorized access'})
 
       }
@@ -165,6 +168,19 @@ async function run() {
       const result =await cartcollection.find(query).toArray()
       res.send(result)
 
+    })
+
+
+    app.get('/menu',async(req,res)=>{
+      const result =await cartcollection.find().toArray()
+      res.send(result)
+    })
+
+
+    app.post('/menu',verifyToken,verifyAdmin,async(req,res)=>{
+      const item = req.body;
+      const result =await cartcollection.insertOne(item);
+      res.send(result)
     })
 
     app.delete('/carts/:id',async(req,res)=>{
