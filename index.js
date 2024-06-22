@@ -171,13 +171,13 @@ async function run() {
     })
 
 
-    app.get('/menu',async(req,res)=>{
+    app.get('/menus',async(req,res)=>{
       const result =await cartcollection.find().toArray()
       res.send(result)
     })
 
 
-    app.post('/menu',verifyToken,verifyAdmin,async(req,res)=>{
+    app.post('/menus',verifyToken,verifyAdmin,async(req,res)=>{
       const item = req.body;
       const result =await cartcollection.insertOne(item);
       res.send(result)
